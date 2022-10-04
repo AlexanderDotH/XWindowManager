@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -89,6 +90,13 @@ namespace X11
             return true;
         }
 
+        public void GetFocusedWindow()
+        {
+            var xaPropName = Native.XInternAtom(this._display, "_NET_ACTIVE_WINDOW", false);
+            Console.WriteLine(xaPropName);
+            Debug.WriteLine(xaPropName);
+        }
+        
         private static WmClass ParseWmClass(string xWindowClass)
         {
             var classes = xWindowClass
@@ -155,8 +163,7 @@ namespace X11
 
             return clientList;
         }
-
-
+        
         private static SafeHandle GetProperty(SafeHandle display, IntPtr win,
             Native.XAtom xaPropType, string propName, out ulong size) =>
             GetProperty(display, win, (ulong) xaPropType, propName, out size);

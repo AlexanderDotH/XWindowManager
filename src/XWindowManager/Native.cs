@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace X11
 {
-    internal static class Native
+    public static class Native
     {
         private const string X11 = "X11";
 
@@ -66,6 +66,7 @@ namespace X11
 
         internal enum XAtom : ulong
         {
+            AnyPropertyType = 0,
             XA_WINDOW = 33,
             XA_CARDINAL = 6,
             XA_STRING = 31
