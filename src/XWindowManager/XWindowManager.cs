@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -33,6 +32,12 @@ namespace X11
             return TryGetXWindows(_display, out windows);
         }
 
+        public XWindowInfo GetFocusedWindow()
+        {
+            ThrowIfNotOpened();
+            return GetFocusedWindow(_display);
+        }
+
         public void Dispose()
         {
             Close();
@@ -61,42 +66,52 @@ namespace X11
                 for (var i = 0; i < (int) clientListSize; i++)
                 {
                     var win = Marshal.ReadIntPtr(clientList.DangerousGetHandle(), i * IntPtr.Size);
-                    var wmClass = ParseWmClass(GetXWindowClass(display, win));
-                    var windowTitle = GetWindowTitle(display, win);
-                    var pid = GetPid(display, win);
-                    var clientMachine = GetClientMachine(display, win);
-                    Native.XGetGeometry(display, win, out var junkRoot, out var junkX, out var junkY, out var width,
-                        out var height, out var borderWidth, out var depth);
-                    windows.Add(new XWindowInfo
-                    {
-                        Id = win,
-                        WmClass = wmClass,
-                        WmName = windowTitle,
-                        WmPid = pid,
-                        WmClientMachine = clientMachine,
-                        Geometry = new Geometry
-                        {
-                            X = junkX,
-                            Y = junkY,
-                            Width = width,
-                            Height = height,
-                            BorderWidth = borderWidth,
-                            Depth = depth
-                        }
-                    });
+                    windows.Add(GetWindowInfo(display, win));
                 }
             }
 
             return true;
         }
 
-        public void GetFocusedWindow()
+        private static XWindowInfo GetFocusedWindow(SafeHandle display)
         {
-            var xaPropName = Native.XInternAtom(this._display, "_NET_ACTIVE_WINDOW", false);
-            Console.WriteLine(xaPropName);
-            Debug.WriteLine(xaPropName);
+            SafeHandle handle = GetProperty(display, Native.XDefaultRootWindow(display), Native.XAtom.XA_WINDOW ,"_NET_ACTIVE_WINDOW", out ulong size);
+
+            if (handle.IsInvalid)
+                return null;
+            
+            IntPtr handleToWindow = Marshal.ReadIntPtr(handle.DangerousGetHandle());
+            return GetWindowInfo(display, handleToWindow);
         }
         
+        private static XWindowInfo GetWindowInfo(SafeHandle display, IntPtr handle)
+        {
+            var wmClass = ParseWmClass(GetXWindowClass(display, handle));
+            var windowTitle = GetWindowTitle(display, handle);
+            var pid = GetPid(display, handle);
+            var clientMachine = GetClientMachine(display, handle);
+            Native.XGetGeometry(display, handle, out var junkRoot, out var junkX, out var junkY, out var width,
+                out var height, out var borderWidth, out var depth);
+
+            return new XWindowInfo
+            {
+                Id = handle,
+                WmClass = wmClass,
+                WmName = windowTitle,
+                WmPid = pid,
+                WmClientMachine = clientMachine,
+                Geometry = new Geometry
+                {
+                    X = junkX,
+                    Y = junkY,
+                    Width = width,
+                    Height = height,
+                    BorderWidth = borderWidth,
+                    Depth = depth
+                }
+            };
+        }
+
         private static WmClass ParseWmClass(string xWindowClass)
         {
             var classes = xWindowClass
@@ -175,9 +190,11 @@ namespace X11
 
             var xaPropName = Native.XInternAtom(display, propName, false);
 
-            if (Native.XGetWindowProperty(display, win, xaPropName, 0,
-                    4096 / 4, false, xaPropType, out var actualTypeReturn, out var actualFormatReturn,
-                    out var nItemsReturn, out var bytesAfterReturn, out var propReturn) != 0)
+            int prop = Native.XGetWindowProperty(display, win, xaPropName, 0,
+                4096 / 4, false, xaPropType, out var actualTypeReturn, out var actualFormatReturn,
+                out var nItemsReturn, out var bytesAfterReturn, out var propReturn);
+            
+            if (prop != 0)
             {
                 return new XPropertyHandle(IntPtr.Zero, false);
             }

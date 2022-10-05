@@ -7,11 +7,13 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-
             XWindowManager windowManager = new XWindowManager();
             windowManager.Open(null);
-            windowManager.GetFocusedWindow();
+            while (true)
+            {
+                Thread.Sleep(1000);
+                windowManager.GetFocusedWindow();
+            }
         }
     }
 }

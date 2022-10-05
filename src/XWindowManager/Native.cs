@@ -5,7 +5,7 @@ namespace X11
 {
     public static class Native
     {
-        private const string X11 = "X11";
+        private const string X11 = "libX11.so.6";
 
         [DllImport(X11)]
         internal static extern IntPtr XOpenDisplay(string displayName);
